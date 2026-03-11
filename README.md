@@ -1,43 +1,45 @@
-# PINN for 1D Steady-State Heat Transfer
+# Physics-Informed Neural Network for 1D Steady-State Heat Transfer
 
 ## Introduction
 
-This repository contains an implementation of a **Physics-Informed Neural Network (PINN)** to solve the **one-dimensional steady-state heat conduction equation**.
+This repository contains a simple implementation of a **Physics-Informed Neural Network (PINN)** for solving the **one-dimensional steady-state heat conduction equation**.
 
-Instead of using traditional numerical methods such as **finite difference** or **finite element methods**, this approach trains a neural network while embedding the governing physical law directly into the loss function.
+Instead of solving the problem using traditional numerical techniques such as the Finite Difference Method (FDM) or Finite Element Method (FEM), the governing physical equation is incorporated directly into the neural network training process.
 
-The model learns the temperature distribution along a rod while respecting both the **heat equation** and the **boundary conditions**.
+The model learns the temperature distribution along a rod while simultaneously satisfying the governing differential equation and the boundary conditions.
 
-The implementation is written in **TensorFlow** and uses automatic differentiation to compute the derivatives required in the governing equation.
+The implementation is written in **TensorFlow** and uses **automatic differentiation** to compute derivatives required in the physics constraints.
 
 ---
 
 ## Problem Description
 
-We consider steady heat conduction in a 1-D rod of length (L).
+We consider heat conduction in a one-dimensional rod of length **L**.
 
-The governing equation is
+### Governing Equation
 
-[
-\frac{d^2 T(x)}{dx^2} = 0
-]
+The steady-state heat conduction equation is
+
+```
+d²T/dx² = 0
+```
 
 where
 
-* (T(x)) is the temperature distribution
-* (x) represents the position along the rod
+* T(x) = temperature distribution along the rod
+* x = spatial coordinate
 
 The spatial domain is
 
-[
-0 \le x \le L
-]
+```
+0 ≤ x ≤ L
+```
 
-In this example,
+In this implementation
 
-[
+```
 L = 2
-]
+```
 
 ---
 
@@ -45,90 +47,84 @@ L = 2
 
 The temperature is specified at both ends of the rod.
 
-[
-T(0) = T_1
-]
+```
+T(0) = T₁
+T(L) = T₂
+```
 
-[
-T(L) = T_2
-]
+For this example
 
-For this implementation:
-
-* (T_1 = 30)
-* (T_2 = 100)
+```
+T₁ = 30
+T₂ = 100
+```
 
 ---
 
 ## Analytical Solution
 
-For steady-state conduction with no internal heat generation, the temperature distribution is linear:
+For steady heat conduction without internal heat generation, the temperature distribution is linear.
 
-[
-T(x) = T_1 + \frac{T_2 - T_1}{L}x
-]
+```
+T(x) = T₁ + (T₂ − T₁)x / L
+```
 
-This analytical expression is used to verify the accuracy of the PINN prediction.
+This analytical expression is used to compare and validate the predictions of the PINN model.
 
 ---
 
-## PINN Approach
+## PINN Methodology
 
-In the PINN framework, a neural network (T_\theta(x)) is used to approximate the temperature distribution.
+In the PINN approach, a neural network is used to approximate the function **T(x)**.
 
-The training process ensures that the network satisfies:
+The model is trained such that:
 
-1. The governing differential equation inside the domain
-2. The boundary conditions at the ends of the rod
+1. The neural network satisfies the governing differential equation inside the domain
+2. The predicted temperature satisfies the boundary conditions
 
-Automatic differentiation in TensorFlow allows us to compute derivatives of the neural network output with respect to the input.
+TensorFlow's automatic differentiation is used to compute derivatives of the neural network output with respect to the input.
 
 ---
 
 ### PDE Residual
 
-The residual of the governing equation is defined as
+The residual of the governing equation is
 
-[
-R(x) = \frac{d^2 T_\theta(x)}{dx^2}
-]
+```
+R(x) = d²Tθ(x) / dx²
+```
 
-The model is trained so that this residual becomes close to zero.
+The neural network is trained so that this residual becomes close to zero throughout the domain.
 
 ---
 
 ### Loss Function
 
-The loss used during training is composed of two parts.
+The training loss consists of two parts.
 
-**Physics loss**
+**Physics Loss**
 
-[
-L_{physics} =
-\frac{1}{N}
-\sum
-\left(
-\frac{d^2 T_\theta}{dx^2}
-\right)^2
-]
+This enforces the governing equation at interior collocation points.
 
-This enforces the governing equation at selected points inside the domain.
+```
+L_physics = mean((d²Tθ/dx²)²)
+```
 
-**Boundary loss**
+**Boundary Loss**
 
-[
-L_{boundary} =
-(T_\theta(0) - T_1)^2 +
-(T_\theta(L) - T_2)^2
-]
+This enforces the boundary conditions.
 
-This ensures that the network predictions satisfy the boundary conditions.
+```
+L_boundary = (Tθ(0) − T₁)² + (Tθ(L) − T₂)²
+```
 
-The total loss is
+**Total Loss**
 
-[
-L = L_{physics} + L_{boundary}
-]
+```
+L_total = L_physics + L_boundary
+```
+
+The network parameters are optimized by minimizing the total loss.
 
 ---
 
@@ -138,79 +134,111 @@ The neural network used in this implementation is a fully connected feed-forward
 
 Architecture used in the code:
 
-```id="b71g1f"
+```
 [1, 20, 20, 20, 1]
 ```
 
-* Input layer: spatial coordinate (x)
-* Three hidden layers with **20 neurons each**
-* Activation function: **tanh**
-* Output layer: predicted temperature
+This corresponds to
+
+* 1 input neuron (x)
+* 3 hidden layers
+* 20 neurons per hidden layer
+* tanh activation function
+* 1 output neuron (temperature)
 
 ---
 
-## Training Details
+## Training Setup
 
-Optimizer used:
+Optimizer used
 
-```id="pskcbn"
-Adam
+```
+Adam Optimizer
 ```
 
-Learning rate:
+Learning rate
 
-```id="cqqgfc"
+```
 0.01
 ```
 
-Training epochs:
+Training epochs
 
-```id="y68hs8"
+```
 5000
 ```
 
-Collocation points inside the domain are used to enforce the governing equation.
+Collocation points
+
+```
+50 points inside the domain
+```
+
+These points enforce the physics constraint of the differential equation.
 
 ---
 
 ## Normalization
 
-To improve training stability, both inputs and outputs are normalized.
+To improve numerical stability during training, both the input and output variables are normalized.
 
 Input normalization
 
-[
-x_{norm} = \frac{x}{L}
-]
+```
+x_normalized = x / L
+```
 
 Output normalization
 
-[
-T_{norm} =
-\frac{T - T_1}{T_2 - T_1}
-]
+```
+T_normalized = (T − T₁) / (T₂ − T₁)
+```
 
-The predicted values are converted back to the original temperature scale after training.
+After training, the predicted values are converted back to the original temperature scale.
 
 ---
 
 ## Results
 
-After training, the PINN model predicts the temperature distribution across the rod.
+After training, the model predicts the temperature distribution along the rod.
 
-The results are compared with the analytical solution and show very good agreement.
+The predicted solution closely matches the analytical linear solution.
 
-The code also computes several error metrics including
+The script also generates a plot comparing
 
-* L2 error (RMSE)
-* maximum absolute error
-* relative accuracy
+* Analytical solution
+* PINN prediction
+* Boundary points
+
+---
+
+## Error Metrics
+
+The following metrics are used to evaluate the model.
+
+**L2 Error (RMSE)**
+
+```
+L2 Error = sqrt(mean((T_pred − T_exact)²))
+```
+
+**Maximum Absolute Error**
+
+```
+Max Error = max(|T_pred − T_exact|)
+```
+
+**Relative Accuracy**
+
+```
+Accuracy = 100 × (1 − L2_error / L2_norm_exact)
+```
 
 ---
 
 ## Repository Structure
 
-```id="w44vop"
+```
 PINN-1D-Steady-Heat
 │
 ├── pinn_heat_equation.py
@@ -222,7 +250,7 @@ PINN-1D-Steady-Heat
 
 ## Libraries Used
 
-The implementation relies on the following libraries:
+This project uses the following Python libraries
 
 * TensorFlow
 * NumPy
@@ -232,14 +260,13 @@ The implementation relies on the following libraries:
 
 ## Possible Extensions
 
-This simple example can be extended to more complex problems such as
+This basic PINN implementation can be extended to more complex physics problems such as
 
 * 2D heat conduction
 * transient heat transfer
 * convection-diffusion equations
 * Navier–Stokes equations
 
-PINNs are increasingly being used in **scientific machine learning and computational physics**.
+PINNs are increasingly used in **scientific machine learning, computational physics, and engineering simulations**.
 
 ---
-
